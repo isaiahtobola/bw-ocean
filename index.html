@@ -233,8 +233,9 @@
     position:fixed; inset:0; z-index:50; display:flex; flex-direction:column;
     align-items:center; justify-content:center; text-align:center; gap:14px;
     background:var(--bg); padding:20px; overflow:hidden;
+    transition:opacity .9s ease;
   }
-  #gate.gone{display:none;}
+  #gate.gone{opacity:0; pointer-events:none;}
   #gateCanvas{position:absolute; inset:0; width:100%; height:100%;}
   #gate > *:not(canvas){position:relative; z-index:1;}
   body.locked .wrap{display:none;}
@@ -832,7 +833,7 @@ loadVaultMeter();
     W = canvas.width = gate.clientWidth;
     H = canvas.height = gate.clientHeight;
     const small = W < 720;
-    const count = small ? 48 : 110;            // dense like a brain, light on mobile
+    const count = small ? 64 : 150;            // dense like a brain, light on mobile
     nodes = Array.from({ length: count }, () => ({
       bx: Math.random() * W,
       by: Math.random() * H,
@@ -855,17 +856,25 @@ loadVaultMeter();
   function draw(t) {
     ctx.clearRect(0, 0, W, H);
     const pts = nodes.map((n) => pos(n, t));
-    const LINK = 132;
+    const LINK = 168;
     for (let i = 0; i < pts.length; i++) {
       for (let j = i + 1; j < pts.length; j++) {
         const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
         const dist = Math.hypot(dx, dy);
         if (dist < LINK) {
+          // Each line breathes on its own phase — gold deepens, then
+          // flares yellow, like a pulse travelling the web.
+          const pulse = 0.5 + 0.5 * Math.sin(t * 0.0016 + nodes[i].ph + nodes[j].ph);
+          const reach = 1 - dist / LINK;
+          const a = 0.36 * reach * (0.3 + 0.7 * pulse);
+          const rC = Math.round(240 + 15 * pulse);
+          const gC = Math.round(183 + 26 * pulse);
+          const bC = Math.round(63 + 39 * pulse);
           ctx.beginPath();
           ctx.moveTo(pts[i].x, pts[i].y);
           ctx.lineTo(pts[j].x, pts[j].y);
-          ctx.strokeStyle = "rgba(240,183,63," + (0.2 * (1 - dist / LINK)) + ")";
-          ctx.lineWidth = 1;
+          ctx.strokeStyle = "rgba(" + rC + "," + gC + "," + bC + "," + a + ")";
+          ctx.lineWidth = 1 + pulse * 0.8;
           ctx.stroke();
         }
       }
@@ -880,7 +889,7 @@ loadVaultMeter();
   }
 
   function tick(t) {
-    if (gate.classList.contains("gone")) { raf = null; return; }  // page swapped: rest
+    if (gate.style.display === "none") { raf = null; return; }  // fully faded away: rest
     for (const n of nodes) {
       n.bx += n.vx; n.by += n.vy;
       if (n.bx < -20 || n.bx > W + 20) n.vx *= -1;
@@ -893,7 +902,7 @@ loadVaultMeter();
   build();
   if (reduced) { draw(900); } else { tick(); }
   window.addEventListener("resize", () => {
-    if (gate.classList.contains("gone")) return;
+    if (gate.style.display === "none") return;
     if (raf) cancelAnimationFrame(raf);
     build();
     if (reduced) { draw(900); } else { tick(); }
@@ -904,15 +913,17 @@ loadVaultMeter();
 <script>
   /* Entry gate — "Are you a viewer?": straight inside, no sign-in, ever.
      This is also how the owner previews the museum as a guest. */
-  document.getElementById("enterBtn").addEventListener("click", () => {
-    document.getElementById("gate").classList.add("gone");
-    document.body.classList.remove("locked");
-  });
+  function leaveGate() {
+    const gate = document.getElementById("gate");
+    document.body.classList.remove("locked");       // the Ocean waits beneath…
+    gate.classList.add("gone");                      // …as the brain fades 100 → 0
+    setTimeout(() => { gate.style.display = "none"; }, 950);
+  }
+  document.getElementById("enterBtn").addEventListener("click", leaveGate);
   /* "Are you BW Young Bo?": inside too — but the curator login opens at the
      top of the page so the owner can sign in with his passcode and post. */
   document.getElementById("bwBtn").addEventListener("click", () => {
-    document.getElementById("gate").classList.add("gone");
-    document.body.classList.remove("locked");
+    leaveGate();
     document.getElementById("curatorBox").hidden = false;
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
