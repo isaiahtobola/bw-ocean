@@ -49,6 +49,24 @@
     font-family:"IBM Plex Mono", monospace; font-size:12px; letter-spacing:.28em;
     text-transform:uppercase; color:var(--gold);
   }
+  /* Vault meter: only files the curator uploads live in the vault;
+     linked exhibits hang free and never move this needle. */
+  .vault-meter{margin-top:9px; width:170px; max-width:44vw;}
+  .vault-meter .vm-label{
+    font-family:"IBM Plex Mono", monospace; font-size:10px; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--cream-dim);
+    display:flex; justify-content:space-between; gap:8px;
+  }
+  .vault-meter .vm-label .vm-used{color:var(--gold-bright);}
+  .vault-meter .vm-track{
+    height:5px; border:1px solid var(--line-soft); border-radius:3px;
+    margin-top:4px; overflow:hidden; background:rgba(0,0,0,.35);
+  }
+  .vault-meter .vm-fill{
+    height:100%; width:0%;
+    background:linear-gradient(90deg, var(--gold), var(--gold-bright));
+    transition:width .8s ease;
+  }
   .curator-box{
     font-family:"IBM Plex Mono", monospace; font-size:12px;
     display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end;
@@ -264,7 +282,13 @@
 <div class="wrap">
 
   <header>
-    <div class="brand">BW Ocean</div>
+    <div>
+      <div class="brand">BW Ocean</div>
+      <div class="vault-meter" id="vaultMeter" title="Only files the curator uploads live in the vault. Linked exhibits are free.">
+        <div class="vm-label"><span>Vault</span><span class="vm-used" id="vaultText">…</span></div>
+        <div class="vm-track"><div class="vm-fill" id="vaultFill"></div></div>
+      </div>
+    </div>
     <!-- Curator sign-in: opens only from the gate's "Are you BW Young Bo?" door
          (or the tiny Curator door in the footer) — visitors never see it -->
     <div class="curator-box" id="curatorBox" hidden>
@@ -644,7 +668,7 @@ if (db) {
 
       status.textContent = "Hanging it on the wall…";
       const { error: insError } = await db.from("exhibits")
-        .insert({ title, room, media_type: mediaType, media_url: mediaUrl });
+        .insert({ title, room, media_type: mediaType, media_url: mediaUrl, size_bytes: link ? 0 : (file ? file.size : 0) });
       if (insError) throw insError;
 
       status.textContent = "✔ Hung: “" + title + "” is live in the museum.";
@@ -658,8 +682,34 @@ if (db) {
   });
 }
 
+/* ============================================================
+   VAULT METER — sums the sizes of files actually stored in the
+   vault (link exhibits count as zero: they hang free). The cap
+   becomes 10 when the vault moves to its bigger home.
+   ============================================================ */
+const VAULT_CAP_GB = 1;
+async function loadVaultMeter() {
+  const text = $("vaultText"), fill = $("vaultFill");
+  if (!db || !text) return;
+  const { data, error } = await db.from("exhibits").select("media_url,size_bytes");
+  if (error) { text.textContent = "—"; return; }
+  let bytes = 0;
+  (data || []).forEach(e => {
+    if (e.media_url && e.media_url.includes("/storage/v1/object/public/media/")) {
+      bytes += (e.size_bytes || 0);
+    }
+  });
+  const cap = VAULT_CAP_GB * 1024 * 1024 * 1024;
+  fill.style.width = Math.min(100, (bytes / cap) * 100) + "%";
+  const used = bytes >= 1073741824 ? (bytes / 1073741824).toFixed(2) + " GB"
+    : bytes >= 1048576 ? (bytes / 1048576).toFixed(1) + " MB"
+    : Math.round(bytes / 1024) + " KB";
+  text.textContent = used + " / " + VAULT_CAP_GB + " GB";
+}
+
 /* Kick off the feed */
 loadFeed();
+loadVaultMeter();
 </script>
 
 <script>
