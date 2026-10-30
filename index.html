@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BW Ocean — a digital museum of BW Young Bo</title>
+<meta name="description" content="BW Ocean — a digital museum of BW Young Bo. Gaming, music, and art, hung on plum-and-gold walls.">
+
+<!-- Fonts: Newsreader for display, IBM Plex Mono for labels -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,500;0,6..72,700;1,6..72,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg:#150d20;
+    --panel:#1f1433;
+    --panel-2:#291b44;
+    --gold:#f0b73f;
+    --gold-bright:#ffd166;
+    --cream:#f6eeda;
+    --cream-dim:#cbbf9f;
+    --line:rgba(240,183,63,.35);
+    --line-soft:rgba(240,183,63,.16);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);
+    color:var(--cream);
+    font-family:"Newsreader", Georgia, serif;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  /* Animated constellation canvas sits behind everything */
+  #stars{
+    position:fixed; inset:0;
+    width:100%; height:100%;
+    z-index:0; pointer-events:none;
+  }
+  .wrap{position:relative; z-index:1; max-width:860px; margin:0 auto; padding:0 20px 80px;}
+
+  /* ---------- Header ---------- */
+  header{
+    display:flex; justify-content:space-between; align-items:flex-start; gap:16px;
+    padding:22px 0 6px; flex-wrap:wrap;
+  }
+  .brand{
+    font-family:"IBM Plex Mono", monospace; font-size:12px; letter-spacing:.28em;
+    text-transform:uppercase; color:var(--gold);
+  }
+  .curator-box{
+    font-family:"IBM Plex Mono", monospace; font-size:12px;
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end;
+  }
+  .curator-box input{
+    background:var(--panel); border:1px solid var(--line-soft); color:var(--cream);
+    padding:7px 9px; border-radius:4px; font-family:inherit; font-size:12px; width:150px;
+  }
+  .curator-box input:focus{outline:1px solid var(--gold);}
+
+  button, .btn{
+    font-family:"IBM Plex Mono", monospace; font-size:12px; letter-spacing:.08em;
+    background:transparent; color:var(--gold); border:1px solid var(--gold);
+    padding:8px 14px; border-radius:4px; cursor:pointer; transition:all .2s ease;
+    text-transform:uppercase; text-decoration:none; display:inline-block;
+  }
+  button:hover, .btn:hover{background:var(--gold); color:var(--bg);}
+  button:disabled{opacity:.45; cursor:wait;}
+  button.ghost{border-color:var(--line-soft); color:var(--cream-dim);}
+  button.ghost:hover{border-color:var(--gold); color:var(--bg);}
+
+  /* ---------- Hero ---------- */
+  .hero{text-align:center; padding:56px 10px 30px;}
+  .hero .over{
+    font-family:"IBM Plex Mono", monospace; font-size:12px; letter-spacing:.4em;
+    text-transform:uppercase; color:var(--gold); margin-bottom:14px;
+  }
+  .hero h1{
+    font-size:clamp(52px, 10vw, 96px); font-weight:700; line-height:.95;
+    color:var(--cream); text-shadow:0 0 34px rgba(240,183,63,.25);
+  }
+  .hero h1 .gold{color:var(--gold-bright); font-style:italic;}
+  .hero .sub{
+    margin-top:16px; font-size:clamp(17px, 2.6vw, 21px); font-style:italic; color:var(--cream-dim);
+  }
+  .hero .motto{
+    margin-top:26px; font-size:clamp(24px, 4.4vw, 38px); font-weight:700; font-style:italic;
+    color:var(--gold-bright); letter-spacing:.01em; text-shadow:0 0 22px rgba(240,183,63,.35);
+  }
+  .hero .motto-credit{
+    margin-top:6px; font-family:"IBM Plex Mono", monospace; font-size:12px;
+    letter-spacing:.22em; text-transform:uppercase; color:var(--cream-dim);
+  }
+  .hero .rule{
+    width:180px; height:1px; margin:28px auto 0;
+    background:linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  /* ---------- Notices & panels ---------- */
+  .notice{
+    border:1px solid var(--gold); background:rgba(240,183,63,.08); color:var(--gold-bright);
+    font-family:"IBM Plex Mono", monospace; font-size:13px; line-height:1.6;
+    padding:14px 16px; border-radius:6px; margin:22px 0; text-align:center;
+  }
+  .panel{
+    background:linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid var(--line); border-radius:8px;
+    padding:22px; margin:26px 0;
+    box-shadow:0 12px 40px rgba(0,0,0,.35);
+  }
+  .panel h2{
+    font-family:"IBM Plex Mono", monospace; font-size:13px; letter-spacing:.3em;
+    text-transform:uppercase; color:var(--gold); margin-bottom:16px; font-weight:600;
+  }
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block; font-family:"IBM Plex Mono", monospace; font-size:11px;
+    letter-spacing:.18em; text-transform:uppercase; color:var(--cream-dim); margin-bottom:6px;
+  }
+  .field input[type="text"], .field input[type="url"], .field select, .field textarea{
+    width:100%; background:var(--bg); border:1px solid var(--line-soft); color:var(--cream);
+    padding:10px 12px; border-radius:4px; font-family:"Newsreader", serif; font-size:16px;
+  }
+  .field input[type="file"]{
+    width:100%; background:var(--bg); border:1px dashed var(--line); color:var(--cream-dim);
+    padding:12px; border-radius:4px; font-family:"IBM Plex Mono", monospace; font-size:12px;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{outline:1px solid var(--gold);}
+  .status{font-family:"IBM Plex Mono", monospace; font-size:12px; color:var(--gold-bright); min-height:16px; margin-top:8px;}
+  .or-line{
+    text-align:center; font-family:"IBM Plex Mono", monospace; font-size:11px;
+    letter-spacing:.25em; color:var(--cream-dim); margin:16px 0; text-transform:uppercase;
+  }
+
+  /* ---------- Filter tabs ---------- */
+  .tabs{
+    display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin:34px 0 8px;
+  }
+  .tabs button{border-radius:999px; padding:9px 20px;}
+  .tabs button.active{background:var(--gold); color:var(--bg);}
+
+  /* ---------- Exhibit cards ---------- */
+  .feed{display:flex; flex-direction:column; gap:34px; margin-top:26px;}
+  .card{
+    background:linear-gradient(180deg, var(--panel-2), var(--panel));
+    border:1px solid var(--line); border-radius:8px; overflow:hidden;
+    box-shadow:0 14px 44px rgba(0,0,0,.4);
+  }
+  /* Gold frame effect around the media itself, like a hung painting */
+  .frame{padding:12px 12px 0;}
+  .frame-inner{
+    border:2px solid var(--gold); outline:1px solid rgba(0,0,0,.55); outline-offset:-7px;
+    background:#0d0817; line-height:0;
+  }
+  .frame-inner img, .frame-inner video{width:100%; height:auto; display:block;}
+  .frame-inner iframe{width:100%; aspect-ratio:16/9; border:0; display:block;}
+  .frame-inner audio{width:100%; padding:22px 14px;}
+  .plaque{padding:20px 24px 22px; text-align:center;}
+  .plaque .room{
+    font-family:"IBM Plex Mono", monospace; font-size:11px; letter-spacing:.32em;
+    text-transform:uppercase; color:var(--gold);
+  }
+  .plaque h3{font-size:28px; font-weight:600; margin:8px 0 4px; line-height:1.15;}
+  .plaque .date{font-family:"IBM Plex Mono", monospace; font-size:12px; color:var(--cream-dim);}
+  .actions{
+    display:flex; gap:12px; justify-content:center; align-items:center;
+    margin-top:16px; flex-wrap:wrap;
+  }
+  .like-btn.liked{background:var(--gold); color:var(--bg);}
+  .like-btn .count{font-weight:600;}
+
+  /* ---------- Comments ---------- */
+  .comments{border-top:1px solid var(--line-soft); margin-top:18px; padding-top:16px; text-align:left;}
+  .comment{padding:10px 0; border-bottom:1px solid rgba(240,183,63,.08);}
+  .comment:last-of-type{border-bottom:none;}
+  .comment .cname{font-family:"IBM Plex Mono", monospace; font-size:12px; color:var(--gold-bright);}
+  .comment .cdate{font-family:"IBM Plex Mono", monospace; font-size:11px; color:var(--cream-dim); margin-left:8px;}
+  .comment .cbody{margin-top:3px; font-size:16.5px; line-height:1.45;}
+  .comment-form{display:flex; flex-direction:column; gap:8px; margin-top:14px;}
+  .comment-form input, .comment-form textarea{
+    background:var(--bg); border:1px solid var(--line-soft); color:var(--cream);
+    padding:9px 11px; border-radius:4px; font-family:"Newsreader", serif; font-size:15px; width:100%;
+  }
+  .comment-form input:focus, .comment-form textarea:focus{outline:1px solid var(--gold);}
+  .comment-form button{align-self:flex-end;}
+  .no-comments{font-style:italic; color:var(--cream-dim); font-size:15px; padding:6px 0;}
+
+  /* ---------- Empty state ---------- */
+  .empty{
+    text-align:center; padding:64px 30px; margin-top:26px;
+    border:1px solid var(--line); border-radius:8px;
+    background:linear-gradient(180deg, var(--panel-2), var(--panel));
+  }
+  .empty .big{font-size:30px; font-style:italic; margin-bottom:10px;}
+  .empty .small{font-family:"IBM Plex Mono", monospace; font-size:12px; letter-spacing:.2em; text-transform:uppercase; color:var(--cream-dim);}
+
+  footer{
+    text-align:center; margin-top:70px;
+    font-family:"IBM Plex Mono", monospace; font-size:11px; letter-spacing:.22em;
+    text-transform:uppercase; color:var(--cream-dim); line-height:2;
+  }
+  footer .gold{color:var(--gold);}
+  [hidden]{display:none !important;}
+</style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<div class="wrap">
+
+  <header>
+    <div class="brand">BW Ocean</div>
+    <!-- Curator sign-in: only the museum owner uses this -->
+    <div class="curator-box" id="curatorBox">
+      <span id="authLoggedOut">
+        <input type="email" id="authEmail" placeholder="curator email" autocomplete="username">
+        <input type="password" id="authPassword" placeholder="password" autocomplete="current-password">
+        <button id="signInBtn" type="button">Curator sign-in</button>
+      </span>
+      <span id="authLoggedIn" hidden>
+        <span id="curatorEmailLabel"></span>
+        <button id="signOutBtn" type="button" class="ghost">Sign out</button>
+      </span>
+    </div>
+  </header>
+  <div class="status" id="authStatus" style="text-align:right;"></div>
+
+  <!-- ================= HERO ================= -->
+  <section class="hero">
+    <div class="over">Est. MMXXVI · Tacoma, Washington</div>
+    <h1>BW <span class="gold">Ocean</span></h1>
+    <p class="sub">a digital museum of BW Young Bo — gaming, music &amp; art, hung one piece at a time.</p>
+    <p class="motto">&ldquo;Keep Moving Forward&rdquo;</p>
+    <p class="motto-credit">— Meet the Robinsons</p>
+    <div class="rule"></div>
+  </section>
+
+  <!-- Shown only while the Supabase keys are still placeholders -->
+  <div class="notice" id="configNotice" hidden>
+    ⚠ This museum is not connected yet. The curator still needs to paste the
+    Supabase project URL and anon key into the CONFIG block at the top of this
+    page's script. Exhibits, likes, and comments will wake up once that's done.
+  </div>
+
+  <!-- ================= CURATOR UPLOAD PANEL (signed-in only) ================= -->
+  <section class="panel" id="uploadPanel" hidden>
+    <h2>Hang a new exhibit</h2>
+    <form id="uploadForm">
+      <div class="field">
+        <label for="upTitle">Title</label>
+        <input type="text" id="upTitle" placeholder="Name of the piece" required>
+      </div>
+      <div class="field">
+        <label for="upRoom">Room</label>
+        <select id="upRoom">
+          <option value="gaming">🎮 Gaming</option>
+          <option value="music">🎵 Music</option>
+          <option value="art">🎨 Art</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="upFile">Upload a file (image, song, or video)</label>
+        <input type="file" id="upFile" accept="image/*,audio/*,video/*">
+      </div>
+      <div class="or-line">— or —</div>
+      <div class="field">
+        <label for="upYoutube">Paste a YouTube link (video exhibits only)</label>
+        <input type="url" id="upYoutube" placeholder="https://www.youtube.com/watch?v=…">
+      </div>
+      <button type="submit" id="uploadBtn">Hang it on the wall</button>
+      <div class="status" id="uploadStatus"></div>
+    </form>
+  </section>
+
+  <!-- ================= FILTER TABS ================= -->
+  <nav class="tabs" id="tabs">
+    <button type="button" data-room="all" class="active">All rooms</button>
+    <button type="button" data-room="gaming">🎮 Gaming</button>
+    <button type="button" data-room="music">🎵 Music</button>
+    <button type="button" data-room="art">🎨 Art</button>
+  </nav>
+
+  <!-- ================= FEED ================= -->
+  <main>
+    <div class="feed" id="feed"></div>
+    <div class="empty" id="emptyState" hidden>
+      <div class="big">The museum is empty — the curator hasn't hung anything yet.</div>
+      <div class="small">Check back soon · the walls are waiting</div>
+    </div>
+    <div class="status" id="feedStatus" style="text-align:center;"></div>
+  </main>
+
+  <footer>
+    <div><span class="gold">BW Ocean</span> · a digital museum of BW Young Bo · Broken World</div>
+    <div>What connects, remains.</div>
+  </footer>
+
+</div>
+
+<!-- Supabase JS v2 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ============================================================
+   CONFIG — curator: paste your Supabase values between the quotes.
+   Find them in your Supabase dashboard:
+   Project Settings → API → "Project URL" and "anon public" key.
+   ============================================================ */
+const SUPABASE_URL = "https://eggsangmupbvikbyraod.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVnZ3NhbmdtdXBidmlrYnlyYW9kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzMzM1MzgsImV4cCI6MjEwODkwOTUzOH0.KETw5ONcXhb937a1jhT1uTFYZMgBgvWJHOWNNPA4ogI";
+/* ============================================================ */
+
+const isConfigured =
+  !SUPABASE_URL.includes("PASTE_") && !SUPABASE_ANON_KEY.includes("PASTE_");
+
+let db = null;
+if (isConfigured && window.supabase) {
+  db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+} else {
+  document.getElementById("configNotice").hidden = false;
+}
+
+/* ---------- small helpers ---------- */
+const $ = (id) => document.getElementById(id);
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
+function prettyDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+}
+function youtubeId(url) {
+  const m = String(url).match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,})/);
+  return m ? m[1] : null;
+}
+const ROOM_LABEL = { gaming: "🎮 Gaming", music: "🎵 Music", art: "🎨 Art" };
+
+/* ============================================================
+   CURATOR AUTH
+   ============================================================ */
+let curator = null;
+
+async function refreshAuthUI() {
+  if (!db) return;
+  const { data } = await db.auth.getSession();
+  curator = data.session ? data.session.user : null;
+  $("authLoggedOut").hidden = !!curator;
+  $("authLoggedIn").hidden = !curator;
+  $("uploadPanel").hidden = !curator;
+  if (curator) $("curatorEmailLabel").textContent = "Curator: " + curator.email;
+}
+
+if (db) {
+  db.auth.onAuthStateChange(() => refreshAuthUI());
+  refreshAuthUI();
+
+  $("signInBtn").addEventListener("click", async () => {
+    const email = $("authEmail").value.trim();
+    const password = $("authPassword").value;
+    $("authStatus").textContent = "Signing in…";
+    const { error } = await db.auth.signInWithPassword({ email, password });
+    $("authStatus").textContent = error ? ("Sign-in failed: " + error.message) : "";
+    if (!error) $("authPassword").value = "";
+  });
+
+  $("signOutBtn").addEventListener("click", async () => {
+    await db.auth.signOut();
+    $("authStatus").textContent = "";
+  });
+}
+
+/* ============================================================
+   FEED — one long scroll, newest first, with room filtering
+   ============================================================ */
+let currentRoom = "all";
+let likeCounts = {};     // exhibit_id -> number of likes
+let commentCounts = {};  // exhibit_id -> number of comments
+
+$("tabs").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-room]");
+  if (!btn) return;
+  currentRoom = btn.dataset.room;
+  document.querySelectorAll("#tabs button").forEach(b =>
+    b.classList.toggle("active", b === btn));
+  loadFeed();
+});
+
+async function loadFeed() {
+  const feed = $("feed");
+  feed.innerHTML = "";
+  $("feedStatus").textContent = "";
+  if (!db) { $("emptyState").hidden = false; return; }
+
+  let query = db.from("exhibits").select("*").order("created_at", { ascending: false });
+  if (currentRoom !== "all") query = query.eq("room", currentRoom);
+  const { data: exhibits, error } = await query;
+
+  if (error) {
+    $("feedStatus").textContent = "Couldn't load the exhibits: " + error.message;
+    return;
+  }
+  $("emptyState").hidden = exhibits.length > 0;
+  if (!exhibits.length) return;
+
+  // Tally likes and comments for the visible exhibits in two quick queries.
+  const ids = exhibits.map(e => e.id);
+  likeCounts = {}; commentCounts = {};
+  const [{ data: likes }, { data: comments }] = await Promise.all([
+    db.from("likes").select("exhibit_id").in("exhibit_id", ids),
+    db.from("comments").select("exhibit_id").in("exhibit_id", ids)
+  ]);
+  (likes || []).forEach(l => likeCounts[l.exhibit_id] = (likeCounts[l.exhibit_id] || 0) + 1);
+  (comments || []).forEach(c => commentCounts[c.exhibit_id] = (commentCounts[c.exhibit_id] || 0) + 1);
+
+  exhibits.forEach(ex => feed.appendChild(renderCard(ex)));
+}
+
+function mediaHtml(ex) {
+  const url = escapeHtml(ex.media_url);
+  if (ex.media_type === "image") {
+    return `<img src="${url}" alt="${escapeHtml(ex.title)}" loading="lazy">`;
+  }
+  if (ex.media_type === "audio") {
+    return `<audio controls preload="metadata" src="${url}"></audio>`;
+  }
+  // video: YouTube links become embeds, everything else a <video> tag
+  const yt = youtubeId(ex.media_url);
+  if (yt) {
+    return `<iframe src="https://www.youtube.com/embed/${yt}" title="${escapeHtml(ex.title)}"
+      loading="lazy" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+  }
+  return `<video controls preload="metadata" src="${url}"></video>`;
+}
+
+function renderCard(ex) {
+  const card = document.createElement("article");
+  card.className = "card";
+  const liked = localStorage.getItem("bw-ocean-liked-" + ex.id) === "1";
+  card.innerHTML = `
+    <div class="frame"><div class="frame-inner">${mediaHtml(ex)}</div></div>
+    <div class="plaque">
+      <div class="room">${ROOM_LABEL[ex.room] || escapeHtml(ex.room)}</div>
+      <h3>${escapeHtml(ex.title)}</h3>
+      <div class="date">Hung ${prettyDate(ex.created_at)}</div>
+      <div class="actions">
+        <button type="button" class="like-btn ${liked ? "liked" : ""}" ${liked ? "disabled" : ""}>
+          ♥ <span class="count">${likeCounts[ex.id] || 0}</span>
+        </button>
+        <button type="button" class="ghost comments-btn">
+          Comments · ${commentCounts[ex.id] || 0}
+        </button>
+      </div>
+      <div class="comments" hidden>
+        <div class="comment-list"></div>
+        <form class="comment-form">
+          <input type="text" class="c-name" placeholder="Your name" maxlength="60">
+          <textarea class="c-body" rows="2" placeholder="Leave a comment…" maxlength="600" required></textarea>
+          <button type="submit">Post comment</button>
+        </form>
+        <div class="status comment-status"></div>
+      </div>
+    </div>`;
+
+  /* --- like button: one like per browser, tracked in localStorage --- */
+  const likeBtn = card.querySelector(".like-btn");
+  likeBtn.addEventListener("click", async () => {
+    if (!db || localStorage.getItem("bw-ocean-liked-" + ex.id)) return;
+    likeBtn.disabled = true;
+    const { error } = await db.from("likes").insert({ exhibit_id: ex.id });
+    if (error) { likeBtn.disabled = false; return; }
+    localStorage.setItem("bw-ocean-liked-" + ex.id, "1");
+    likeBtn.classList.add("liked");
+    likeBtn.querySelector(".count").textContent = (likeCounts[ex.id] || 0) + 1;
+    likeCounts[ex.id] = (likeCounts[ex.id] || 0) + 1;
+  });
+
+  /* --- comments: expandable list + simple form, no login needed --- */
+  const commentsBtn = card.querySelector(".comments-btn");
+  const commentsBox = card.querySelector(".comments");
+  let commentsLoaded = false;
+  commentsBtn.addEventListener("click", async () => {
+    commentsBox.hidden = !commentsBox.hidden;
+    if (!commentsBox.hidden && !commentsLoaded) {
+      commentsLoaded = true;
+      await loadComments(ex.id, card);
+    }
+  });
+
+  card.querySelector(".comment-form").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    if (!db) return;
+    const name = card.querySelector(".c-name").value.trim() || "Anonymous";
+    const body = card.querySelector(".c-body").value.trim();
+    const status = card.querySelector(".comment-status");
+    if (!body) return;
+    status.textContent = "Posting…";
+    const { error } = await db.from("comments").insert({ exhibit_id: ex.id, name, body });
+    if (error) { status.textContent = "Couldn't post: " + error.message; return; }
+    card.querySelector(".c-body").value = "";
+    status.textContent = "";
+    commentCounts[ex.id] = (commentCounts[ex.id] || 0) + 1;
+    commentsBtn.textContent = "Comments · " + commentCounts[ex.id];
+    await loadComments(ex.id, card);
+  });
+
+  return card;
+}
+
+async function loadComments(exhibitId, card) {
+  const list = card.querySelector(".comment-list");
+  const { data, error } = await db.from("comments")
+    .select("*").eq("exhibit_id", exhibitId).order("created_at", { ascending: true });
+  if (error) { list.innerHTML = `<div class="no-comments">Couldn't load comments.</div>`; return; }
+  if (!data.length) {
+    list.innerHTML = `<div class="no-comments">No comments yet — be the first.</div>`;
+    return;
+  }
+  list.innerHTML = data.map(c => `
+    <div class="comment">
+      <span class="cname">${escapeHtml(c.name)}</span><span class="cdate">${prettyDate(c.created_at)}</span>
+      <div class="cbody">${escapeHtml(c.body)}</div>
+    </div>`).join("");
+}
+</script>
+
+<script>
+/* ============================================================
+   CURATOR UPLOAD — file goes to the `media` storage bucket,
+   then a row goes into the `exhibits` table pointing at it.
+   ============================================================ */
+if (db) {
+  $("uploadForm").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const status = $("uploadStatus");
+    const btn = $("uploadBtn");
+    const title = $("upTitle").value.trim();
+    const room = $("upRoom").value;
+    const file = $("upFile").files[0];
+    const yt = $("upYoutube").value.trim();
+
+    if (!title) { status.textContent = "Give the piece a title first."; return; }
+    if (!file && !yt) { status.textContent = "Pick a file or paste a YouTube link."; return; }
+
+    btn.disabled = true;
+    try {
+      let mediaType, mediaUrl;
+
+      if (yt) {
+        // YouTube link exhibit — stored as a video, rendered as an embed.
+        if (!youtubeId(yt)) throw new Error("That doesn't look like a YouTube link.");
+        mediaType = "video";
+        mediaUrl = yt;
+      } else {
+        // File exhibit — media type comes from the file itself.
+        mediaType = file.type.split("/")[0]; // image | audio | video
+        if (!["image", "audio", "video"].includes(mediaType)) {
+          throw new Error("That file type can't hang in the museum.");
+        }
+        status.textContent = "Uploading the file…";
+        const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+        const path = Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "-" + safeName;
+        const { error: upError } = await db.storage.from("media").upload(path, file);
+        if (upError) throw upError;
+        mediaUrl = db.storage.from("media").getPublicUrl(path).data.publicUrl;
+      }
+
+      status.textContent = "Hanging it on the wall…";
+      const { error: insError } = await db.from("exhibits")
+        .insert({ title, room, media_type: mediaType, media_url: mediaUrl });
+      if (insError) throw insError;
+
+      status.textContent = "✔ Hung: “" + title + "” is live in the museum.";
+      $("uploadForm").reset();
+      loadFeed();
+    } catch (err) {
+      status.textContent = "Upload failed: " + err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+/* Kick off the feed */
+loadFeed();
+</script>
+
+<script>
+/* ============================================================
+   GOLD CONSTELLATION — drifting particles with connecting
+   lines. Full animation on desktop; lighter on small screens;
+   static starfield if the visitor prefers reduced motion.
+   ============================================================ */
+(function () {
+  const canvas = document.getElementById("stars");
+  const ctx = canvas.getContext("2d");
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let W, H, dots = [], raf = null;
+
+  function build() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    const small = W < 720;
+    const count = small ? 34 : 90;             // keep mobile light
+    dots = Array.from({ length: count }, () => ({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.32,
+      vy: (Math.random() - 0.5) * 0.32,
+      r: Math.random() * 1.7 + 0.5
+    }));
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    for (const d of dots) {
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,209,102,.8)";
+      ctx.fill();
+    }
+    const LINK = 120;
+    for (let i = 0; i < dots.length; i++) {
+      for (let j = i + 1; j < dots.length; j++) {
+        const dx = dots[i].x - dots[j].x, dy = dots[i].y - dots[j].y;
+        const dist = Math.hypot(dx, dy);
+        if (dist < LINK) {
+          ctx.beginPath();
+          ctx.moveTo(dots[i].x, dots[i].y);
+          ctx.lineTo(dots[j].x, dots[j].y);
+          ctx.strokeStyle = "rgba(240,183,63," + (0.16 * (1 - dist / LINK)) + ")";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  function tick() {
+    for (const d of dots) {
+      d.x += d.vx; d.y += d.vy;
+      if (d.x < 0 || d.x > W) d.vx *= -1;
+      if (d.y < 0 || d.y > H) d.vy *= -1;
+    }
+    draw();
+    raf = requestAnimationFrame(tick);
+  }
+
+  build();
+  if (reduced) { draw(); } else { tick(); }
+  window.addEventListener("resize", () => {
+    if (raf) cancelAnimationFrame(raf);
+    build();
+    if (reduced) { draw(); } else { tick(); }
+  });
+})();
+</script>
+
+</body>
+</html>
