@@ -318,10 +318,19 @@
         <label for="upFile">Upload a file (image, song, or video)</label>
         <input type="file" id="upFile" accept="image/*,audio/*,video/*">
       </div>
-      <div class="or-line">— or —</div>
+      <div class="or-line">— or hang it by link: no storage used, unlimited exhibits —</div>
       <div class="field">
-        <label for="upYoutube">Paste a YouTube link (video exhibits only)</label>
-        <input type="url" id="upYoutube" placeholder="https://www.youtube.com/watch?v=…">
+        <label for="upLink">Paste any link — YouTube, an image, a song, or a video file</label>
+        <input type="url" id="upLink" placeholder="https://…">
+      </div>
+      <div class="field">
+        <label for="upLinkType">If it's a link, what is it?</label>
+        <select id="upLinkType">
+          <option value="auto">Auto-detect</option>
+          <option value="image">🖼 Image</option>
+          <option value="video">🎬 Video</option>
+          <option value="audio">🎵 Song / audio</option>
+        </select>
       </div>
       <button type="submit" id="uploadBtn">Hang it on the wall</button>
       <div class="status" id="uploadStatus"></div>
@@ -594,20 +603,31 @@ if (db) {
     const title = $("upTitle").value.trim();
     const room = $("upRoom").value;
     const file = $("upFile").files[0];
-    const yt = $("upYoutube").value.trim();
+    const link = $("upLink").value.trim();
 
     if (!title) { status.textContent = "Give the piece a title first."; return; }
-    if (!file && !yt) { status.textContent = "Pick a file or paste a YouTube link."; return; }
+    if (!file && !link) { status.textContent = "Pick a file or paste a link."; return; }
 
     btn.disabled = true;
     try {
       let mediaType, mediaUrl;
 
-      if (yt) {
-        // YouTube link exhibit — stored as a video, rendered as an embed.
-        if (!youtubeId(yt)) throw new Error("That doesn't look like a YouTube link.");
-        mediaType = "video";
-        mediaUrl = yt;
+      if (link) {
+        // Link exhibit — nothing is stored in the vault; the page frames
+        // the source, so link exhibits are unlimited and cost no storage.
+        if (youtubeId(link)) {
+          mediaType = "video";
+          mediaUrl = link;
+        } else {
+          const pick = $("upLinkType").value;
+          const ext = (link.split(/[?#]/)[0].split(".").pop() || "").toLowerCase();
+          if (pick !== "auto") mediaType = pick;
+          else if (["jpg", "jpeg", "png", "gif", "webp", "avif", "svg"].includes(ext)) mediaType = "image";
+          else if (["mp3", "wav", "m4a", "ogg", "oga", "flac"].includes(ext)) mediaType = "audio";
+          else if (["mp4", "webm", "mov", "m4v"].includes(ext)) mediaType = "video";
+          else throw new Error("Couldn't tell what that link is — set its type in the dropdown.");
+          mediaUrl = link;
+        }
       } else {
         // File exhibit — media type comes from the file itself.
         mediaType = file.type.split("/")[0]; // image | audio | video
