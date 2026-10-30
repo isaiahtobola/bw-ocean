@@ -202,20 +202,74 @@
   }
   footer .gold{color:var(--gold);}
   [hidden]{display:none !important;}
+
+  /* ---------- Entry gate: visitors click to enter, no sign-in ---------- */
+  #gate{
+    position:fixed; inset:0; z-index:50; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; gap:14px;
+    background:rgba(21,13,32,.55); padding:20px;
+    transition:opacity .8s ease;
+  }
+  #gate.gone{opacity:0; pointer-events:none;}
+  #gate .g-title{
+    font-size:clamp(44px, 9vw, 84px); font-weight:700; line-height:.95;
+    color:var(--cream); text-shadow:0 0 34px rgba(240,183,63,.3);
+  }
+  #gate .g-title .gold{color:var(--gold-bright); font-style:italic;}
+  #gate .g-sub{font-style:italic; color:var(--cream-dim); font-size:clamp(15px, 2.4vw, 19px);}
+  #gate .g-motto{
+    font-size:clamp(20px, 3.6vw, 30px); font-weight:700; font-style:italic;
+    color:var(--gold-bright); text-shadow:0 0 22px rgba(240,183,63,.35);
+  }
+  #gate .g-credit{
+    font-family:"IBM Plex Mono", monospace; font-size:11px; letter-spacing:.22em;
+    text-transform:uppercase; color:var(--cream-dim); margin-top:-8px;
+  }
+  #gate .g-ask{
+    margin-top:20px; font-family:"IBM Plex Mono", monospace; font-size:12px;
+    letter-spacing:.22em; text-transform:uppercase; color:var(--cream-dim);
+  }
+  #bwBtn{font-size:14px; padding:12px 28px;}
+  #enterBtn{
+    font-size:15px; padding:14px 34px; border-width:2px;
+    animation:gatePulse 2.2s ease-in-out infinite;
+  }
+  @keyframes gatePulse{
+    0%,100%{box-shadow:0 0 0 rgba(240,183,63,0);}
+    50%{box-shadow:0 0 26px rgba(240,183,63,.45);}
+  }
+  .curator-toggle{
+    font-family:"IBM Plex Mono", monospace; font-size:11px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--cream-dim); background:none; border:none;
+    cursor:pointer; padding:4px 2px;
+  }
+  .curator-toggle:hover{color:var(--gold); background:none;}
 </style>
 </head>
 <body>
 
 <canvas id="stars"></canvas>
 
+<!-- ============ ENTRY GATE — visitors click to enter, no sign-in ============ -->
+<div id="gate">
+  <div class="g-title">BW <span class="gold">Ocean</span></div>
+  <div class="g-sub">a digital museum of BW Young Bo</div>
+  <div class="g-motto">&ldquo;Keep Moving Forward&rdquo;</div>
+  <div class="g-credit">— Meet the Robinsons</div>
+  <div class="g-ask">Who&rsquo;s walking in?</div>
+  <button id="bwBtn" type="button">Are you BW Young Bo?</button>
+  <button id="enterBtn" type="button">Are you a viewer?</button>
+</div>
+
 <div class="wrap">
 
   <header>
     <div class="brand">BW Ocean</div>
-    <!-- Curator sign-in: only the museum owner uses this -->
-    <div class="curator-box" id="curatorBox">
+    <!-- Curator sign-in: opens only from the gate's "Are you BW Young Bo?" door
+         (or the tiny Curator door in the footer) — visitors never see it -->
+    <div class="curator-box" id="curatorBox" hidden>
       <span id="authLoggedOut">
-        <input type="email" id="authEmail" placeholder="curator email" autocomplete="username">
+        <input type="email" id="authEmail" placeholder="curator email" autocomplete="username" value="isaiahtobola@gmail.com">
         <input type="password" id="authPassword" placeholder="password" autocomplete="current-password">
         <button id="signInBtn" type="button">Curator sign-in</button>
       </span>
@@ -295,6 +349,7 @@
   <footer>
     <div><span class="gold">BW Ocean</span> · a digital museum of BW Young Bo · Broken World</div>
     <div>What connects, remains.</div>
+    <div><button class="curator-toggle" id="curatorToggle" type="button">Curator door</button></div>
   </footer>
 
 </div>
@@ -658,5 +713,25 @@ loadFeed();
 })();
 </script>
 
+<script>
+  /* Entry gate — "Are you a viewer?": straight inside, no sign-in, ever.
+     This is also how the owner previews the museum as a guest. */
+  document.getElementById("enterBtn").addEventListener("click", () => {
+    document.getElementById("gate").classList.add("gone");
+  });
+  /* "Are you BW Young Bo?": inside too — but the curator login opens at the
+     top of the page so the owner can sign in with his passcode and post. */
+  document.getElementById("bwBtn").addEventListener("click", () => {
+    document.getElementById("gate").classList.add("gone");
+    document.getElementById("curatorBox").hidden = false;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+  /* The footer Curator door: the same login, for return visits. */
+  document.getElementById("curatorToggle").addEventListener("click", () => {
+    const box = document.getElementById("curatorBox");
+    box.hidden = !box.hidden;
+    if (!box.hidden) window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+</script>
 </body>
 </html>
