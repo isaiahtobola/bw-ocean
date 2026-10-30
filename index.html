@@ -31,12 +31,19 @@
     font-family:"Newsreader", Georgia, serif;
     min-height:100vh;
     overflow-x:hidden;
+    transition:background-color 3s ease;
   }
   /* Animated constellation canvas sits behind everything */
   #stars{
     position:fixed; inset:0;
     width:100%; height:100%;
     z-index:0; pointer-events:none;
+  }
+  /* The museum's breathing glow — fades in with each plum pulse */
+  #pulseGlow{
+    position:fixed; inset:0; z-index:0; pointer-events:none; opacity:0;
+    transition:opacity 3s ease;
+    background:radial-gradient(ellipse at 50% 38%, rgba(240,183,63,.15), rgba(122,79,196,.13) 45%, transparent 75%);
   }
   .wrap{position:relative; z-index:1; max-width:860px; margin:0 auto; padding:0 20px 80px;}
 
@@ -225,10 +232,12 @@
   #gate{
     position:fixed; inset:0; z-index:50; display:flex; flex-direction:column;
     align-items:center; justify-content:center; text-align:center; gap:14px;
-    background:rgba(21,13,32,.55); padding:20px;
-    transition:opacity .8s ease;
+    background:var(--bg); padding:20px; overflow:hidden;
   }
-  #gate.gone{opacity:0; pointer-events:none;}
+  #gate.gone{display:none;}
+  #gateCanvas{position:absolute; inset:0; width:100%; height:100%;}
+  #gate > *:not(canvas){position:relative; z-index:1;}
+  body.locked .wrap{display:none;}
   #gate .g-title{
     font-size:clamp(44px, 9vw, 84px); font-weight:700; line-height:.95;
     color:var(--cream); text-shadow:0 0 34px rgba(240,183,63,.3);
@@ -264,12 +273,15 @@
   .curator-toggle:hover{color:var(--gold); background:none;}
 </style>
 </head>
-<body>
+<body class="locked">
 
 <canvas id="stars"></canvas>
+<div id="pulseGlow" aria-hidden="true"></div>
 
-<!-- ============ ENTRY GATE — visitors click to enter, no sign-in ============ -->
+<!-- ============ ENTRY GATE — its own solid page: a gold neuron web.
+     Picking a door swaps pages outright; the museum waits behind it. ============ -->
 <div id="gate">
+  <canvas id="gateCanvas" aria-hidden="true"></canvas>
   <div class="g-title">BW <span class="gold">Ocean</span></div>
   <div class="g-sub">a digital museum of BW Young Bo</div>
   <div class="g-motto">&ldquo;Keep Moving Forward&rdquo;</div>
@@ -714,71 +726,177 @@ loadVaultMeter();
 
 <script>
 /* ============================================================
-   GOLD CONSTELLATION — drifting particles with connecting
-   lines. Full animation on desktop; lighter on small screens;
-   static starfield if the visitor prefers reduced motion.
+   THE OPEN OCEAN — the museum's sky: still stars that twinkle
+   and a few brighter dots that flash, wide and calm after the
+   gate's web. Static if the visitor prefers reduced motion.
    ============================================================ */
 (function () {
   const canvas = document.getElementById("stars");
   const ctx = canvas.getContext("2d");
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let W, H, dots = [], raf = null;
+  let W, H, stars = [], raf = null;
 
   function build() {
     W = canvas.width = window.innerWidth;
     H = canvas.height = window.innerHeight;
     const small = W < 720;
-    const count = small ? 34 : 90;             // keep mobile light
-    dots = Array.from({ length: count }, () => ({
-      x: Math.random() * W,
-      y: Math.random() * H,
-      vx: (Math.random() - 0.5) * 0.32,
-      vy: (Math.random() - 0.5) * 0.32,
-      r: Math.random() * 1.7 + 0.5
+    const count = small ? 80 : 170;            // keep mobile light
+    stars = Array.from({ length: count }, () => {
+      const flash = Math.random() < 0.1;       // ~1 in 10 is a flashing dot
+      return {
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: flash ? Math.random() * 1.1 + 1.7 : Math.random() * 1.2 + 0.4,
+        gold: Math.random() < 0.45,
+        flash,
+        ph: Math.random() * Math.PI * 2,       // twinkle phase
+        sp: Math.random() * 0.9 + 0.35         // twinkle speed
+      };
+    });
+  }
+
+  function draw(t) {
+    ctx.clearRect(0, 0, W, H);
+    for (const s of stars) {
+      const tw = 0.5 + 0.5 * Math.sin(t * 0.001 * s.sp + s.ph);
+      const a = s.flash ? 0.25 + 0.75 * tw : 0.3 + 0.5 * tw;
+      const col = s.gold ? "255,209,102" : "250,240,214";
+      if (s.flash) {                            // soft halo on the flashers
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r * 3.2, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(" + col + "," + (0.07 * tw) + ")";
+        ctx.fill();
+      }
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(" + col + "," + a + ")";
+      ctx.fill();
+    }
+  }
+
+  function tick(t) {
+    draw(t || 0);
+    raf = requestAnimationFrame(tick);
+  }
+
+  build();
+  if (reduced) { draw(1200); } else { tick(); }
+  window.addEventListener("resize", () => {
+    if (raf) cancelAnimationFrame(raf);
+    build();
+    if (reduced) { draw(1200); } else { tick(); }
+  });
+})();
+</script>
+
+<script>
+/* ============================================================
+   THE PLUM BREATHES — every so often (never on a schedule)
+   the museum's plum lightens, glows warmer and contrasty,
+   holds a moment, then settles back to normal.
+   ============================================================ */
+(function () {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const glow = document.getElementById("pulseGlow");
+  const LIGHTS = ["#221540", "#281a4a", "#2b1c50", "#201238"];
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const wait = (min, max) => min + Math.random() * (max - min);
+
+  function breathe() {
+    document.body.style.backgroundColor = pick(LIGHTS);
+    glow.style.opacity = (0.5 + Math.random() * 0.35).toFixed(2);
+    setTimeout(() => {
+      document.body.style.backgroundColor = "";
+      glow.style.opacity = "0";
+      setTimeout(breathe, wait(7000, 16000));   // rest between breaths
+    }, wait(2600, 4600));                        // hold the glow a moment
+  }
+  setTimeout(breathe, wait(5000, 9000));
+})();
+</script>
+
+<script>
+/* ============================================================
+   THE GATE'S BRAIN — a gold neuron web on its own solid page.
+   Nodes drift slow and sway in sine waves, so the web ripples
+   like something thinking. It stops the moment a door is picked.
+   ============================================================ */
+(function () {
+  const gate = document.getElementById("gate");
+  const canvas = document.getElementById("gateCanvas");
+  const ctx = canvas.getContext("2d");
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let W, H, nodes = [], raf = null;
+
+  function build() {
+    W = canvas.width = gate.clientWidth;
+    H = canvas.height = gate.clientHeight;
+    const small = W < 720;
+    const count = small ? 48 : 110;            // dense like a brain, light on mobile
+    nodes = Array.from({ length: count }, () => ({
+      bx: Math.random() * W,
+      by: Math.random() * H,
+      vx: (Math.random() - 0.5) * 0.22,
+      vy: (Math.random() - 0.5) * 0.22,
+      r: Math.random() * 1.5 + 0.9,
+      ph: Math.random() * Math.PI * 2,         // sway phase
+      ph2: Math.random() * Math.PI * 2,
+      amp: Math.random() * 10 + 8              // sway reach — the wavey part
     }));
   }
 
-  function draw() {
+  function pos(n, t) {
+    return {
+      x: n.bx + Math.sin(t * 0.0006 + n.ph) * n.amp,
+      y: n.by + Math.cos(t * 0.00045 + n.ph2) * n.amp * 0.8
+    };
+  }
+
+  function draw(t) {
     ctx.clearRect(0, 0, W, H);
-    for (const d of dots) {
-      ctx.beginPath();
-      ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(255,209,102,.8)";
-      ctx.fill();
-    }
-    const LINK = 120;
-    for (let i = 0; i < dots.length; i++) {
-      for (let j = i + 1; j < dots.length; j++) {
-        const dx = dots[i].x - dots[j].x, dy = dots[i].y - dots[j].y;
+    const pts = nodes.map((n) => pos(n, t));
+    const LINK = 132;
+    for (let i = 0; i < pts.length; i++) {
+      for (let j = i + 1; j < pts.length; j++) {
+        const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
         const dist = Math.hypot(dx, dy);
         if (dist < LINK) {
           ctx.beginPath();
-          ctx.moveTo(dots[i].x, dots[i].y);
-          ctx.lineTo(dots[j].x, dots[j].y);
-          ctx.strokeStyle = "rgba(240,183,63," + (0.16 * (1 - dist / LINK)) + ")";
+          ctx.moveTo(pts[i].x, pts[i].y);
+          ctx.lineTo(pts[j].x, pts[j].y);
+          ctx.strokeStyle = "rgba(240,183,63," + (0.2 * (1 - dist / LINK)) + ")";
           ctx.lineWidth = 1;
           ctx.stroke();
         }
       }
     }
+    for (let i = 0; i < nodes.length; i++) {
+      const pulse = 0.75 + 0.25 * Math.sin(t * 0.002 + nodes[i].ph);
+      ctx.beginPath();
+      ctx.arc(pts[i].x, pts[i].y, nodes[i].r * pulse, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,209,102,.9)";
+      ctx.fill();
+    }
   }
 
-  function tick() {
-    for (const d of dots) {
-      d.x += d.vx; d.y += d.vy;
-      if (d.x < 0 || d.x > W) d.vx *= -1;
-      if (d.y < 0 || d.y > H) d.vy *= -1;
+  function tick(t) {
+    if (gate.classList.contains("gone")) { raf = null; return; }  // page swapped: rest
+    for (const n of nodes) {
+      n.bx += n.vx; n.by += n.vy;
+      if (n.bx < -20 || n.bx > W + 20) n.vx *= -1;
+      if (n.by < -20 || n.by > H + 20) n.vy *= -1;
     }
-    draw();
+    draw(t || 0);
     raf = requestAnimationFrame(tick);
   }
 
   build();
-  if (reduced) { draw(); } else { tick(); }
+  if (reduced) { draw(900); } else { tick(); }
   window.addEventListener("resize", () => {
+    if (gate.classList.contains("gone")) return;
     if (raf) cancelAnimationFrame(raf);
     build();
-    if (reduced) { draw(); } else { tick(); }
+    if (reduced) { draw(900); } else { tick(); }
   });
 })();
 </script>
@@ -788,11 +906,13 @@ loadVaultMeter();
      This is also how the owner previews the museum as a guest. */
   document.getElementById("enterBtn").addEventListener("click", () => {
     document.getElementById("gate").classList.add("gone");
+    document.body.classList.remove("locked");
   });
   /* "Are you BW Young Bo?": inside too — but the curator login opens at the
      top of the page so the owner can sign in with his passcode and post. */
   document.getElementById("bwBtn").addEventListener("click", () => {
     document.getElementById("gate").classList.add("gone");
+    document.body.classList.remove("locked");
     document.getElementById("curatorBox").hidden = false;
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
