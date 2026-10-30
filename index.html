@@ -818,9 +818,11 @@ loadVaultMeter();
 
 <script>
 /* ============================================================
-   THE GATE'S BRAIN — a gold neuron web on its own solid page.
-   Nodes drift slow and sway in sine waves, so the web ripples
-   like something thinking. It stops the moment a door is picked.
+   THE GATE'S BRAIN — a gold neuron web on its own solid page,
+   breathing in 15-second cycles: the dots gather and every
+   line connects into a full web, the web flares to full gold,
+   then the dots wander off at random — and glide back to
+   connect again. Stops once a door is picked.
    ============================================================ */
 (function () {
   const gate = document.getElementById("gate");
@@ -835,77 +837,100 @@ loadVaultMeter();
     const small = W < 720;
     const count = small ? 64 : 150;            // dense like a brain, light on mobile
     nodes = Array.from({ length: count }, () => ({
-      bx: Math.random() * W,
-      by: Math.random() * H,
-      vx: (Math.random() - 0.5) * 0.22,
-      vy: (Math.random() - 0.5) * 0.22,
+      hx: Math.random() * W,                   // home — where the web weaves
+      hy: Math.random() * H,
       r: Math.random() * 1.5 + 0.9,
-      ph: Math.random() * Math.PI * 2,         // sway phase
+      ph: Math.random() * Math.PI * 2,         // sway + pulse phase
       ph2: Math.random() * Math.PI * 2,
-      amp: Math.random() * 10 + 8              // sway reach — the wavey part
+      amp: Math.random() * 9 + 7,              // gentle sway while gathered
+      wr: Math.random() * 80 + 60,             // wander reach when scattered
+      ws: Math.random() * 0.5 + 0.55           // wander speed
     }));
   }
 
-  function pos(n, t) {
+  const ease = (x) => x * x * (3 - 2 * x);     // smoothstep
+  function seg(t, a, b) {                      // 0→1 across [a,b]
+    return ease(Math.min(1, Math.max(0, (t - a) / (b - a))));
+  }
+
+  /* The 15-second breath:
+     0.0–4.0s  web whole, lines breathing soft
+     4.0–7.5s  the flare — everything pulses to full gold
+     7.5–11s   dots wander off, web dissolves
+     11–15s    dots glide home, web reweaves                    */
+  function cycle(t) {
+    const ct = t % 15000;
+    let g, glow;
+    if (ct < 4000)       { g = 1; glow = 0.3; }
+    else if (ct < 7500)  { g = 1; glow = 0.3 + 0.7 * (seg(ct, 4000, 5200) - seg(ct, 6300, 7500)); }
+    else if (ct < 11000) { g = 1 - seg(ct, 7500, 11000); glow = 0.3; }
+    else                 { g = seg(ct, 11000, 15000); glow = 0.3; }
+    return { g, glow };
+  }
+
+  function pos(n, t, g) {
+    const scatter = 1 - g;
     return {
-      x: n.bx + Math.sin(t * 0.0006 + n.ph) * n.amp,
-      y: n.by + Math.cos(t * 0.00045 + n.ph2) * n.amp * 0.8
+      x: n.hx + Math.sin(t * 0.0006 + n.ph) * n.amp
+              + Math.sin(t * 0.00021 * n.ws + n.ph * 2.7) * n.wr * scatter,
+      y: n.hy + Math.cos(t * 0.00045 + n.ph2) * n.amp * 0.8
+              + Math.cos(t * 0.00017 * n.ws + n.ph2 * 2.3) * n.wr * scatter
     };
   }
 
   function draw(t) {
     ctx.clearRect(0, 0, W, H);
-    const pts = nodes.map((n) => pos(n, t));
-    const LINK = 168;
+    const { g, glow } = cycle(t);
+    const pts = nodes.map((n) => pos(n, t, g));
+    const LINK = 92 + 84 * g;                  // web pulls tight as it gathers
     for (let i = 0; i < pts.length; i++) {
       for (let j = i + 1; j < pts.length; j++) {
         const dx = pts[i].x - pts[j].x, dy = pts[i].y - pts[j].y;
         const dist = Math.hypot(dx, dy);
         if (dist < LINK) {
-          // Each line breathes on its own phase — gold deepens, then
-          // flares yellow, like a pulse travelling the web.
           const pulse = 0.5 + 0.5 * Math.sin(t * 0.0016 + nodes[i].ph + nodes[j].ph);
+          const heat = Math.max(pulse * 0.75, glow);
           const reach = 1 - dist / LINK;
-          const a = 0.36 * reach * (0.3 + 0.7 * pulse);
-          const rC = Math.round(240 + 15 * pulse);
-          const gC = Math.round(183 + 26 * pulse);
-          const bC = Math.round(63 + 39 * pulse);
+          const a = (0.08 + 0.6 * glow) * reach * (0.3 + 0.7 * pulse) * (0.25 + 0.75 * g);
           ctx.beginPath();
           ctx.moveTo(pts[i].x, pts[i].y);
           ctx.lineTo(pts[j].x, pts[j].y);
-          ctx.strokeStyle = "rgba(" + rC + "," + gC + "," + bC + "," + a + ")";
-          ctx.lineWidth = 1 + pulse * 0.8;
+          ctx.strokeStyle = "rgba(" + Math.round(240 + 15 * heat) + "," +
+            Math.round(183 + 26 * heat) + "," + Math.round(63 + 39 * heat) + "," + a + ")";
+          ctx.lineWidth = 1 + heat * 1.3 * glow + pulse * 0.4;
           ctx.stroke();
         }
       }
     }
     for (let i = 0; i < nodes.length; i++) {
-      const pulse = 0.75 + 0.25 * Math.sin(t * 0.002 + nodes[i].ph);
+      const n = nodes[i];
+      const pulse = 0.75 + 0.25 * Math.sin(t * 0.002 + n.ph);
+      if (glow > 0.55) {                        // halos bloom at the flare's peak
+        ctx.beginPath();
+        ctx.arc(pts[i].x, pts[i].y, n.r * 4.2, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,209,102," + (0.1 * glow) + ")";
+        ctx.fill();
+      }
       ctx.beginPath();
-      ctx.arc(pts[i].x, pts[i].y, nodes[i].r * pulse, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(255,209,102,.9)";
+      ctx.arc(pts[i].x, pts[i].y, n.r * pulse * (0.9 + 0.45 * glow), 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255," + Math.round(209 + 20 * glow) + ",102,.95)";
       ctx.fill();
     }
   }
 
   function tick(t) {
     if (gate.style.display === "none") { raf = null; return; }  // fully faded away: rest
-    for (const n of nodes) {
-      n.bx += n.vx; n.by += n.vy;
-      if (n.bx < -20 || n.bx > W + 20) n.vx *= -1;
-      if (n.by < -20 || n.by > H + 20) n.vy *= -1;
-    }
     draw(t || 0);
     raf = requestAnimationFrame(tick);
   }
 
   build();
-  if (reduced) { draw(900); } else { tick(); }
+  if (reduced) { draw(5000); } else { tick(); }
   window.addEventListener("resize", () => {
     if (gate.style.display === "none") return;
     if (raf) cancelAnimationFrame(raf);
     build();
-    if (reduced) { draw(900); } else { tick(); }
+    if (reduced) { draw(5000); } else { tick(); }
   });
 })();
 </script>
