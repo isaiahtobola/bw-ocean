@@ -448,9 +448,9 @@
       <div class="field">
         <label for="upRoom">Room</label>
         <select id="upRoom">
-          <option value="gaming">🎮 Gaming</option>
-          <option value="music">🎵 Music</option>
-          <option value="art">🎨 Art</option>
+          <option value="gaming">Gaming</option>
+          <option value="music">Music</option>
+          <option value="art">Art</option>
         </select>
       </div>
       <div class="field">
@@ -479,9 +479,9 @@
   <!-- ================= FILTER TABS ================= -->
   <nav class="tabs" id="tabs">
     <button type="button" data-room="all" class="active">All rooms</button>
-    <button type="button" data-room="gaming">🎮 Gaming</button>
-    <button type="button" data-room="music">🎵 Music</button>
-    <button type="button" data-room="art">🎨 Art</button>
+    <button type="button" data-room="gaming">Gaming</button>
+    <button type="button" data-room="music">Music</button>
+    <button type="button" data-room="art">Art</button>
   </nav>
 
   <!-- ================= FEED ================= -->
@@ -543,7 +543,7 @@ function youtubeId(url) {
   const m = String(url).match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,})/);
   return m ? m[1] : null;
 }
-const ROOM_LABEL = { gaming: "🎮 Gaming", music: "🎵 Music", art: "🎨 Art" };
+const ROOM_LABEL = { gaming: "Gaming", music: "Music", art: "Art" };
 
 /* ============================================================
    CURATOR AUTH
