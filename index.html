@@ -173,6 +173,23 @@
 
   /* ---------- Exhibit cards ---------- */
   .feed{display:flex; flex-direction:column; gap:34px; margin-top:26px;}
+  /* BUILD 95 view toggle (his Nov 6 call): one feed, three ways to
+     look — the full single feed, a 3-wide grid, a 5-wide grid.
+     Same gold frames, same cards; only the arrangement changes. */
+  .viewtabs{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin:14px 0 4px;}
+  .viewtabs button{border-radius:999px; padding:8px 18px;}
+  .viewtabs button.active{background:var(--gold); color:var(--bg);}
+  .feed[data-mode="grid3"]{display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;}
+  .feed[data-mode="grid5"]{display:grid; grid-template-columns:repeat(5, 1fr); gap:6px;}
+  .feed[data-mode="grid3"] .card, .feed[data-mode="grid5"] .card{box-shadow:0 6px 20px rgba(0,0,0,.35);}
+  .feed[data-mode="grid3"] .frame, .feed[data-mode="grid5"] .frame{padding:6px 6px 0;}
+  .feed[data-mode="grid3"] .plaque{padding:10px 10px 12px;}
+  .feed[data-mode="grid5"] .plaque{padding:8px 6px 10px;}
+  .feed[data-mode="grid3"] .plaque h3{font-size:17px;}
+  .feed[data-mode="grid5"] .plaque h3{font-size:12.5px;}
+  .feed[data-mode="grid3"] .comments, .feed[data-mode="grid5"] .comments{display:none;}
+  .feed[data-mode="grid5"] .actions, .feed[data-mode="grid5"] .plaque .date{display:none;}
+  .feed[data-mode="grid3"] .actions{margin-top:9px;}
   .card{
     background:linear-gradient(180deg, var(--panel-2), var(--panel));
     border:1px solid var(--line); border-radius:8px; overflow:hidden;
@@ -287,11 +304,23 @@
   }
   #doors .door-panel{
     position:relative; width:50%; height:100%; flex:0 0 50%;
+    /* BUILD 95 fabric (his Nov 6 call): the doors are curtains now —
+       soft vertical folds of plum cloth with light caught on the
+       ridges, drifting almost imperceptibly, like heavy silk in a
+       still room. */
     background:
       linear-gradient(180deg, rgba(255,209,102,.05), rgba(0,0,0,0) 30%),
-      repeating-linear-gradient(90deg, rgba(240,183,63,.05) 0 2px, rgba(0,0,0,0) 2px 72px),
+      repeating-linear-gradient(90deg,
+        rgba(8,3,18,.42) 0px, rgba(46,29,79,.12) 14px, rgba(255,232,190,.07) 27px,
+        rgba(23,13,41,0) 42px, rgba(8,3,18,.34) 58px, rgba(23,13,41,0) 72px),
       linear-gradient(160deg, var(--panel-2), var(--panel) 55%, #170d29);
-    transition:transform 1.6s cubic-bezier(.72,0,.18,1);
+    background-size:auto, 144px 100%, auto;
+    transition:transform 2.4s cubic-bezier(.6,.02,.16,1), background-size 2.4s cubic-bezier(.6,.02,.16,1);
+    animation:foldDrift 9s ease-in-out infinite alternate;
+  }
+  @keyframes foldDrift{
+    from{background-position:0 0, 0 0, 0 0;}
+    to{background-position:0 0, 26px 0, 0 0;}
   }
   #doors .door-l{
     border-right:1px solid var(--line);
@@ -348,14 +377,19 @@
     animation:gatePulse 2.2s ease-in-out infinite; padding:10px 18px;
     border:1px solid var(--line-soft); border-radius:999px;
   }
-  #doors.open .door-l{transform:translateX(-103%);}
-  #doors.open .door-r{transform:translateX(103%);}
+  /* opening = gathering: each curtain bunches toward its own edge,
+     folds tightening (background-size shrinks), cloth swaying a
+     breath as it settles — no hard slide anywhere. */
+  #doors .door-l{transform-origin:left center;}
+  #doors .door-r{transform-origin:right center;}
+  #doors.open .door-l{transform:translateX(-94%) scaleX(.30) rotate(-.6deg); background-size:auto, 52px 100%, auto;}
+  #doors.open .door-r{transform:translateX(94%) scaleX(.30) rotate(.6deg); background-size:auto, 52px 100%, auto;}
   #doors.open .door-seam{opacity:0; transition:opacity .3s ease; animation:none;}
   #doors.open .door-breath{opacity:0; transition:opacity .4s ease; animation:none;}
   #doors.open .door-center{opacity:0; transform:scale(1.06);}
   @media (prefers-reduced-motion: reduce){
     #doors .door-seam, #doors .door-breath, #doors .door-medal, #doors .door-hint{animation:none;}
-    #doors .door-panel{transition:transform .3s ease;}
+    #doors .door-panel{transition:transform .3s ease; animation:none;}
   }
 </style>
 </head>
@@ -482,6 +516,12 @@
     <button type="button" data-room="gaming">Gaming</button>
     <button type="button" data-room="music">Music</button>
     <button type="button" data-room="art">Art</button>
+  </nav>
+
+  <nav class="viewtabs" id="viewTabs" aria-label="Choose how to view the exhibits">
+    <button type="button" data-vmode="feed" class="active">Feed</button>
+    <button type="button" data-vmode="grid3">Grid · 3</button>
+    <button type="button" data-vmode="grid5">Grid · 5</button>
   </nav>
 
   <!-- ================= FEED ================= -->
@@ -1108,6 +1148,29 @@ loadVaultMeter();
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDoors(); }
     });
   })();
+</script>
+<script>
+/* BUILD 95: feed / grid view toggle for the Ocean. */
+(function(){
+  var feed = document.getElementById('feed');
+  var tabs = document.getElementById('viewTabs');
+  if(!feed || !tabs) return;
+  function setMode(m){
+    feed.setAttribute('data-mode', m);
+    tabs.querySelectorAll('button[data-vmode]').forEach(function(b){
+      b.classList.toggle('active', b.getAttribute('data-vmode') === m);
+    });
+    try{ localStorage.setItem('bw-ocean-view', m); }catch(e){}
+  }
+  var saved = 'feed';
+  try{ saved = localStorage.getItem('bw-ocean-view') || 'feed'; }catch(e){}
+  if(['feed','grid3','grid5'].indexOf(saved) < 0) saved = 'feed';
+  setMode(saved);
+  tabs.addEventListener('click', function(e){
+    var b = e.target.closest('button[data-vmode]');
+    if(b) setMode(b.getAttribute('data-vmode'));
+  });
+})();
 </script>
 </body>
 </html>
