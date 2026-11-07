@@ -56,6 +56,14 @@
     font-family:"IBM Plex Mono", monospace; font-size:12px; letter-spacing:.28em;
     text-transform:uppercase; color:var(--gold);
   }
+  .home-link{
+    font-family:"IBM Plex Mono", monospace; font-size:11px; letter-spacing:.22em;
+    text-transform:uppercase; color:var(--gold); text-decoration:none;
+    border:1px solid var(--line-soft); border-radius:999px; padding:8px 14px;
+    display:inline-block; transition:border-color .25s ease, color .25s ease;
+  }
+  .home-link:hover{color:var(--gold-bright); border-color:var(--gold);}
+  #gate .home-link{margin-top:18px;}
   /* Vault meter: only files the curator uploads live in the vault;
      linked exhibits hang free and never move this needle. */
   .vault-meter{margin-top:9px; width:170px; max-width:44vw;}
@@ -426,6 +434,7 @@
   <div class="g-ask">Who&rsquo;s walking in?</div>
   <button id="bwBtn" type="button">Are you BW Young Bo?</button>
   <button id="enterBtn" type="button">Are you a viewer?</button>
+  <a class="home-link" href="https://bwyoungbo.com">&larr; Broken World home</a>
 </div>
 
 <div class="wrap">
@@ -438,6 +447,7 @@
         <div class="vm-track"><div class="vm-fill" id="vaultFill"></div></div>
       </div>
     </div>
+    <a class="home-link" href="https://bwyoungbo.com">&larr; Broken World home</a>
     <!-- Curator sign-in: opens only from the gate's "Are you BW Young Bo?" door
          (or the tiny Curator door in the footer) — visitors never see it -->
     <div class="curator-box" id="curatorBox" hidden>
