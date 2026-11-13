@@ -554,7 +554,21 @@
     var now = new Date(), md = (now.getMonth() + 1) * 100 + now.getDate();
     var inSeason = md >= 930 || md <= 101;
     var t = '';
-    if((q === 'halloween' || q === 'xmas') && inSeason){ t = q; try{ sessionStorage.setItem('bw-ocean-theme', q); }catch(e){} }
+    /* NORMAL HAND-OVER (Nov 12): the main site now says the word
+       'normal' out loud on its Ocean door — ?theme=normal is an
+       explicit order for plum-and-gold, not an absence of orders.
+       It skips the storage fallback entirely and overwrites every
+       remembered key with '', so a stale Halloween left in this
+       origin's memory cannot survive the visit and greet the
+       next one. */
+    if(q === 'normal'){
+      try{
+        localStorage.setItem('bw-theme', '');
+        localStorage.setItem('bw-ocean-theme', '');
+        sessionStorage.setItem('bw-ocean-theme', '');
+      }catch(e){}
+    }
+    else if((q === 'halloween' || q === 'xmas') && inSeason){ t = q; try{ sessionStorage.setItem('bw-ocean-theme', q); }catch(e){} }
     else if(inSeason){ try{ t = localStorage.getItem('bw-theme') || sessionStorage.getItem('bw-ocean-theme') || localStorage.getItem('bw-ocean-theme') || ''; }catch(e){} }
     if(t === 'halloween' || t === 'xmas') document.body.setAttribute('data-theme', t);
   }catch(e){}
