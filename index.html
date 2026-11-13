@@ -242,6 +242,33 @@
   .carpv-x{position:absolute; top:4px; right:4px; width:24px; height:24px; border-radius:50%; padding:0; font-size:12px; line-height:1; display:flex; align-items:center; justify-content:center;}
   .carpv-actions{display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;}
   .carpv-summary{display:flex; gap:10px; align-items:center; margin:2px 0 14px; flex-wrap:wrap; font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--cream);}
+  /* ---------- Image shape (Isaiah's call, 2026-11-12): a rectangle
+     hangs as a rectangle — the square is a door he can walk through,
+     never a tax on every photo. ---------- */
+  .imgshape{margin:2px 0 14px; border:1px solid var(--line); border-radius:8px; padding:12px; background:var(--well);}
+  .imgshape-head{display:flex; gap:12px; align-items:center;}
+  .imgshape-thumb{width:64px; height:64px; object-fit:cover; border:1px solid var(--gold); border-radius:6px; flex:0 0 auto; background:var(--bg); display:block;}
+  .imgshape-dims{font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--gold-bright);}
+  .imgshape-note{font-size:15px; font-style:italic; color:var(--cream-dim); margin-top:3px; line-height:1.35;}
+  .imgshape-modes{display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;}
+  .imgshape-mode.active{background:var(--gold); color:var(--bg);}
+  .imgshape-warn{margin-top:10px; font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--gold-bright); line-height:1.55;}
+  .imgshape-ready{display:flex; gap:10px; align-items:center; margin-top:12px; flex-wrap:wrap; font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--cream); line-height:1.5;}
+  .imgshape-ready-thumb{width:44px; height:44px; object-fit:cover; border:1px solid var(--gold); border-radius:5px; display:block;}
+  /* The square editor: one stage, two doors (crop / fit). Drag to
+     move; pinch on a phone, the slider bar or the wheel on a PC. */
+  .sqed{position:fixed; inset:0; z-index:70; background:rgba(13,8,23,.88); display:flex; align-items:center; justify-content:center; padding:14px; overflow-y:auto;}
+  .sqed[hidden]{display:none;}
+  .sqed-box{background:linear-gradient(180deg, var(--panel-2), var(--panel)); border:1px solid var(--gold); border-radius:10px; padding:18px; width:min(470px, 94vw); box-shadow:0 20px 60px rgba(0,0,0,.55); margin:auto;}
+  .sqed-title{font-family:"IBM Plex Mono",monospace; font-size:13px; letter-spacing:.3em; text-transform:uppercase; color:var(--gold); text-align:center; font-weight:600;}
+  .sqed-hint{text-align:center; font-style:italic; color:var(--cream-dim); font-size:14.5px; margin:7px 0 12px; line-height:1.4;}
+  .sqed-stage{border:2px solid var(--gold); outline:1px solid rgba(0,0,0,.55); outline-offset:-7px; border-radius:4px; overflow:hidden; background:#000; line-height:0;}
+  #sqEdCanvas{width:100%; height:auto; display:block; touch-action:none; cursor:grab;}
+  #sqEdCanvas:active{cursor:grabbing;}
+  .sqed-zoomrow{display:flex; align-items:center; gap:10px; margin:14px 2px 2px;}
+  .sqed-zlabel{font-family:"IBM Plex Mono",monospace; color:var(--gold); font-size:17px; line-height:1;}
+  .sqed-zoomrow input[type="range"]{flex:1; accent-color:var(--gold); height:30px; cursor:pointer;}
+  .sqed-actions{display:flex; gap:10px; justify-content:space-between; margin-top:12px; flex-wrap:wrap;}
   .plaque .room{
     font-family:"IBM Plex Mono", monospace; font-size:11px; letter-spacing:.32em;
     text-transform:uppercase; color:var(--gold);
@@ -739,6 +766,26 @@
         <label for="upFile">Upload a file (image, song, or video)</label>
         <input type="file" id="upFile" accept="image/*,audio/*,video/*">
       </div>
+      <div class="imgshape" id="imgShapeBox" hidden>
+        <div class="imgshape-head">
+          <img class="imgshape-thumb" id="imgShapeThumb" alt="The photo you picked">
+          <div>
+            <div class="imgshape-dims" id="imgShapeDims"></div>
+            <div class="imgshape-note">This photo isn&rsquo;t square &mdash; how should it hang?</div>
+          </div>
+        </div>
+        <div class="imgshape-modes" role="group" aria-label="Image shape">
+          <button type="button" class="imgshape-mode active" id="modeKeep">Keep rectangle</button>
+          <button type="button" class="imgshape-mode" id="modeCrop">Crop square</button>
+          <button type="button" class="imgshape-mode" id="modeFit">Fit square &middot; black bars</button>
+        </div>
+        <div class="imgshape-warn" id="imgShapeWarn" hidden></div>
+        <div class="imgshape-ready" id="imgShapeReady" hidden>
+          <img class="imgshape-ready-thumb" id="imgShapeReadyThumb" alt="Your square, ready to hang">
+          <span id="imgShapeReadyText"></span>
+          <button type="button" class="ghost" id="imgShapeEditBtn">Adjust</button>
+        </div>
+      </div>
       <div class="field">
         <label for="upCarousel">Or a carousel — pick 2 or more photos, hung together as one exhibit</label>
         <input type="file" id="upCarousel" accept="image/*" multiple>
@@ -774,6 +821,25 @@
       <div class="status" id="uploadStatus"></div>
     </form>
   </section>
+
+  <!-- ================= SQUARE IMAGE EDITOR (curator only) ================= -->
+  <div class="sqed" id="sqEditor" hidden>
+    <div class="sqed-box">
+      <div class="sqed-title" id="sqEdTitle">Crop square</div>
+      <div class="sqed-hint" id="sqEdHint">Drag to move &middot; pinch, scroll or slide to zoom</div>
+      <div class="sqed-stage"><canvas id="sqEdCanvas" width="640" height="640"></canvas></div>
+      <div class="sqed-zoomrow">
+        <span class="sqed-zlabel" aria-hidden="true">&minus;</span>
+        <input type="range" id="sqEdZoom" min="0" max="1000" value="0" aria-label="Zoom">
+        <span class="sqed-zlabel" aria-hidden="true">+</span>
+      </div>
+      <div class="sqed-actions">
+        <button type="button" class="ghost" id="sqEdCancel">Cancel</button>
+        <button type="button" class="ghost" id="sqEdReset">Reset view</button>
+        <button type="button" id="sqEdUse">Use this square</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ================= FILTER TABS ================= -->
   <nav class="tabs" id="tabs">
@@ -1166,6 +1232,257 @@ if (db) {
   $("carClearBtn").addEventListener("click", clearCarPicks);
   $("carClearBtn2").addEventListener("click", clearCarPicks);
 
+  /* ---------- image shape: rectangles hang as rectangles ----------
+     (Isaiah's call, 2026-11-12) A non-square photo offers three doors:
+       KEEP — the original file, untouched, at its own shape.
+       CROP — fill the square; drag + zoom choose the window.
+       FIT  — the whole photo inside a square, black bars fill the
+              rest; zoom out grows the bars, in leans closer.
+     Both square doors bake a 1080x1080 JPEG that rides the very same
+     vault road as any other file — only the file differs. */
+  const SQ_OUT = 1080;
+  let imgShape = null; // { file, url, w, h, isGif, mode, outFile, outUrl }
+
+  function shapeMarkMode() {
+    if (!imgShape) return;
+    $("modeKeep").classList.toggle("active", imgShape.mode === "keep");
+    $("modeCrop").classList.toggle("active", imgShape.mode === "crop");
+    $("modeFit").classList.toggle("active", imgShape.mode === "fit");
+    const ready = $("imgShapeReady");
+    if (imgShape.outFile) {
+      ready.hidden = false;
+      $("imgShapeReadyThumb").src = imgShape.outUrl;
+      $("imgShapeReadyText").textContent = imgShape.mode === "crop"
+        ? "Square ready — cropped to fill. This square is what hangs."
+        : "Square ready — whole photo, black bars. This square is what hangs.";
+    } else {
+      ready.hidden = true;
+    }
+  }
+
+  function shapeReset() {
+    if (imgShape) {
+      if (imgShape.url) URL.revokeObjectURL(imgShape.url);
+      if (imgShape.outUrl) URL.revokeObjectURL(imgShape.outUrl);
+    }
+    imgShape = null;
+    $("imgShapeBox").hidden = true;
+    $("imgShapeReady").hidden = true;
+    $("imgShapeWarn").hidden = true;
+  }
+
+  function shapeKeep() {
+    if (!imgShape) return;
+    if (imgShape.outUrl) URL.revokeObjectURL(imgShape.outUrl);
+    imgShape.mode = "keep";
+    imgShape.outFile = null;
+    imgShape.outUrl = null;
+    shapeMarkMode();
+  }
+
+  $("upFile").addEventListener("change", () => {
+    shapeReset();
+    const f = $("upFile").files[0];
+    if (!f || !f.type.startsWith("image/") || f.type === "image/svg+xml") return;
+    const url = URL.createObjectURL(f);
+    const probe = new Image();
+    probe.onload = () => {
+      const w = probe.naturalWidth, h = probe.naturalHeight;
+      // Square (within a hair) or unreadable — straight through, as always.
+      if (!w || !h || Math.abs(w - h) <= Math.max(2, Math.round(Math.max(w, h) * 0.01))) {
+        URL.revokeObjectURL(url);
+        return;
+      }
+      imgShape = { file: f, url, w, h, isGif: f.type === "image/gif", mode: "keep", outFile: null, outUrl: null };
+      $("imgShapeThumb").src = url;
+      $("imgShapeDims").textContent = w + " × " + h + (w > h ? " — a wide rectangle" : " — a tall rectangle");
+      $("imgShapeWarn").hidden = !imgShape.isGif;
+      if (imgShape.isGif) $("imgShapeWarn").textContent = "A GIF keeps its motion as a rectangle. A square door freezes it into a still photo.";
+      shapeMarkMode();
+      $("imgShapeBox").hidden = false;
+    };
+    probe.onerror = () => URL.revokeObjectURL(url);
+    probe.src = url;
+  });
+
+  $("modeKeep").addEventListener("click", shapeKeep);
+  $("modeCrop").addEventListener("click", () => sqOpen("crop"));
+  $("modeFit").addEventListener("click", () => sqOpen("fit"));
+  $("imgShapeEditBtn").addEventListener("click", () => {
+    if (imgShape && imgShape.mode !== "keep") sqOpen(imgShape.mode);
+  });
+
+  /* ---------- the square editor: one stage, two doors ---------- */
+  const SQ_VIEW = 640;
+  const sqEd = { mode: "crop", img: null, scale: 1, min: 1, max: 1, base: 1, cx: SQ_VIEW / 2, cy: SQ_VIEW / 2, backup: null };
+  const sqCanvas = $("sqEdCanvas");
+  const sqCtx = sqCanvas.getContext("2d");
+
+  function sqLimits() {
+    const w = sqEd.img.naturalWidth, h = sqEd.img.naturalHeight;
+    sqEd.base = sqEd.mode === "crop"
+      ? Math.max(SQ_VIEW / w, SQ_VIEW / h)
+      : Math.min(SQ_VIEW / w, SQ_VIEW / h);
+    sqEd.min = sqEd.mode === "crop" ? sqEd.base : sqEd.base * 0.2;
+    sqEd.max = sqEd.base * 5;
+  }
+
+  function sqClamp() {
+    const w = sqEd.img.naturalWidth * sqEd.scale, h = sqEd.img.naturalHeight * sqEd.scale;
+    if (sqEd.mode === "crop") {
+      // the photo must always cover the whole square — no gaps, ever
+      sqEd.cx = Math.min(Math.max(sqEd.cx, SQ_VIEW - w / 2), w / 2);
+      sqEd.cy = Math.min(Math.max(sqEd.cy, SQ_VIEW - h / 2), h / 2);
+    } else if (w <= SQ_VIEW && h <= SQ_VIEW) {
+      // fitted inside — keep the whole photo on the stage
+      sqEd.cx = Math.min(Math.max(sqEd.cx, w / 2), SQ_VIEW - w / 2);
+      sqEd.cy = Math.min(Math.max(sqEd.cy, h / 2), SQ_VIEW - h / 2);
+    } else {
+      sqEd.cx = Math.min(Math.max(sqEd.cx, SQ_VIEW - w * 0.9), w * 0.9);
+      sqEd.cy = Math.min(Math.max(sqEd.cy, SQ_VIEW - h * 0.9), h * 0.9);
+    }
+  }
+
+  function sqDraw() {
+    const w = sqEd.img.naturalWidth, h = sqEd.img.naturalHeight;
+    sqCtx.fillStyle = "#000";
+    sqCtx.fillRect(0, 0, SQ_VIEW, SQ_VIEW);
+    sqCtx.drawImage(sqEd.img, sqEd.cx - (w * sqEd.scale) / 2, sqEd.cy - (h * sqEd.scale) / 2, w * sqEd.scale, h * sqEd.scale);
+    const t = Math.log(sqEd.scale / sqEd.min) / Math.log(sqEd.max / sqEd.min);
+    $("sqEdZoom").value = String(Math.round(t * 1000));
+  }
+
+  function sqSetScale(next, px, py) {
+    const s0 = sqEd.scale;
+    const s1 = Math.min(sqEd.max, Math.max(sqEd.min, next));
+    if (s1 !== s0) {
+      // the photo point under the finger / cursor stays under it
+      sqEd.cx = px - (px - sqEd.cx) * (s1 / s0);
+      sqEd.cy = py - (py - sqEd.cy) * (s1 / s0);
+      sqEd.scale = s1;
+    }
+    sqClamp();
+    sqDraw();
+  }
+
+  function sqResetView() {
+    sqEd.scale = sqEd.base;
+    sqEd.cx = SQ_VIEW / 2;
+    sqEd.cy = SQ_VIEW / 2;
+    sqClamp();
+    sqDraw();
+  }
+
+  function sqOpen(mode) {
+    if (!imgShape) return;
+    sqEd.backup = { mode: imgShape.mode, outFile: imgShape.outFile, outUrl: imgShape.outUrl };
+    sqEd.mode = mode;
+    const img = new Image();
+    img.onload = () => {
+      sqEd.img = img;
+      sqLimits();
+      imgShape.mode = mode;
+      $("sqEdTitle").textContent = mode === "crop" ? "Crop square" : "Fit square — black bars";
+      $("sqEdHint").textContent = mode === "crop"
+        ? "Drag to move · pinch, scroll or slide to zoom · double-tap hops in"
+        : "The whole photo stays in frame — zoom out and the black bars grow";
+      $("sqEditor").hidden = false;
+      sqResetView();
+      shapeMarkMode();
+    };
+    img.src = imgShape.url;
+  }
+
+  function sqClose(restore) {
+    $("sqEditor").hidden = true;
+    if (restore && sqEd.backup && imgShape) {
+      // walked away from the editor — the photo keeps the door it had
+      if (imgShape.outUrl && imgShape.outUrl !== sqEd.backup.outUrl) URL.revokeObjectURL(imgShape.outUrl);
+      imgShape.mode = sqEd.backup.mode;
+      imgShape.outFile = sqEd.backup.outFile;
+      imgShape.outUrl = sqEd.backup.outUrl;
+    }
+    sqEd.backup = null;
+    if (imgShape) shapeMarkMode();
+  }
+
+  $("sqEdCancel").addEventListener("click", () => sqClose(true));
+  $("sqEdReset").addEventListener("click", sqResetView);
+  $("sqEdZoom").addEventListener("input", () => {
+    if (!sqEd.img) return;
+    const t = Number($("sqEdZoom").value) / 1000;
+    sqSetScale(sqEd.min * Math.pow(sqEd.max / sqEd.min, t), SQ_VIEW / 2, SQ_VIEW / 2);
+  });
+  $("sqEdUse").addEventListener("click", () => {
+    if (!sqEd.img || !imgShape) return;
+    const out = document.createElement("canvas");
+    out.width = SQ_OUT; out.height = SQ_OUT;
+    const octx = out.getContext("2d");
+    octx.fillStyle = "#000";
+    octx.fillRect(0, 0, SQ_OUT, SQ_OUT);
+    const k = SQ_OUT / SQ_VIEW;
+    const w = sqEd.img.naturalWidth, h = sqEd.img.naturalHeight;
+    octx.drawImage(sqEd.img,
+      (sqEd.cx - (w * sqEd.scale) / 2) * k, (sqEd.cy - (h * sqEd.scale) / 2) * k,
+      w * sqEd.scale * k, h * sqEd.scale * k);
+    out.toBlob((blob) => {
+      if (!blob) { sqClose(true); return; }
+      const oldUrl = imgShape.outUrl;
+      const base = (imgShape.file.name || "photo").replace(/\.[^.]+$/, "") || "photo";
+      imgShape.outFile = new File([blob], base + "-square.jpg", { type: "image/jpeg" });
+      imgShape.outUrl = URL.createObjectURL(blob);
+      if (oldUrl) URL.revokeObjectURL(oldUrl);
+      imgShape.mode = sqEd.mode;
+      sqClose(false);
+    }, "image/jpeg", 0.9);
+  });
+
+  /* drag with one finger / mouse, pinch with two */
+  const sqPointers = new Map();
+  let sqPinchD = 0;
+  function sqPos(ev) {
+    const r = sqCanvas.getBoundingClientRect();
+    return { x: (ev.clientX - r.left) * (SQ_VIEW / r.width), y: (ev.clientY - r.top) * (SQ_VIEW / r.height) };
+  }
+  sqCanvas.addEventListener("pointerdown", (ev) => {
+    try { sqCanvas.setPointerCapture(ev.pointerId); } catch (e) { /* capture is a nicety, never the point */ }
+    sqPointers.set(ev.pointerId, sqPos(ev));
+    if (sqPointers.size === 2) {
+      const pts = [...sqPointers.values()];
+      sqPinchD = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+    }
+  });
+  sqCanvas.addEventListener("pointermove", (ev) => {
+    if (!sqPointers.has(ev.pointerId)) return;
+    const prev = sqPointers.get(ev.pointerId);
+    const now = sqPos(ev);
+    sqPointers.set(ev.pointerId, now);
+    if (sqPointers.size === 1) {
+      sqEd.cx += now.x - prev.x;
+      sqEd.cy += now.y - prev.y;
+      sqClamp();
+      sqDraw();
+    } else if (sqPointers.size === 2) {
+      const pts = [...sqPointers.values()];
+      const d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      const mid = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+      if (sqPinchD > 0) sqSetScale(sqEd.scale * (d / sqPinchD), mid.x, mid.y);
+      sqPinchD = d;
+    }
+  });
+  const sqLift = (ev) => { sqPointers.delete(ev.pointerId); if (sqPointers.size < 2) sqPinchD = 0; };
+  sqCanvas.addEventListener("pointerup", sqLift);
+  sqCanvas.addEventListener("pointercancel", sqLift);
+  sqCanvas.addEventListener("wheel", (ev) => {
+    ev.preventDefault();
+    const p = sqPos(ev);
+    sqSetScale(sqEd.scale * Math.exp(-ev.deltaY * 0.0016), p.x, p.y);
+  }, { passive: false });
+  sqCanvas.addEventListener("dblclick", () => {
+    if (sqEd.mode === "fit") { sqResetView(); return; }
+    sqSetScale(sqEd.scale <= sqEd.base * 1.05 ? sqEd.base * 2 : sqEd.base, SQ_VIEW / 2, SQ_VIEW / 2);
+  });
+
   $("uploadForm").addEventListener("submit", async (ev) => {
     ev.preventDefault();
     const status = $("uploadStatus");
@@ -1183,7 +1500,7 @@ if (db) {
 
     btn.disabled = true;
     try {
-      let mediaType, mediaUrl, mediaUrls = null, totalBytes = 0;
+      let mediaType, mediaUrl, mediaUrls = null, totalBytes = 0, hangFile = null;
 
       if (carFiles.length >= 2) {
         // Carousel exhibit — every photo rides the same vault road
@@ -1239,8 +1556,11 @@ if (db) {
         // stays the text ledger only; no storage secret lives in this page.
         const session = await freshSession();
         if (!session) throw new Error("Your sign-in went stale \u2014 sign out at the curator door, sign back in once, and try again.");
+        // A shaped photo hangs as its baked square; the rectangle
+        // door (and every other file) hangs as the original file.
+        hangFile = (imgShape && imgShape.file === file && imgShape.outFile) ? imgShape.outFile : file;
         const form = new FormData();
-        form.append("file", file);
+        form.append("file", hangFile);
         const upResp = await fetch(WORKER_UPLOAD_URL, {
           method: "POST",
           headers: { Authorization: "Bearer " + session.access_token },
@@ -1252,7 +1572,7 @@ if (db) {
       }
 
       status.textContent = "Hanging it on the wall…";
-      const row = { title, room, media_type: mediaType, media_url: mediaUrl, size_bytes: mediaUrls ? totalBytes : (link ? 0 : (file ? file.size : 0)) };
+      const row = { title, room, media_type: mediaType, media_url: mediaUrl, size_bytes: mediaUrls ? totalBytes : (link ? 0 : (file ? (hangFile || file).size : 0)) };
       if (mediaUrls && !window.__bwOceanNoMediaUrls) row.media_urls = mediaUrls;
       let ins = await db.from("exhibits").insert(row);
       if (ins.error && mediaUrls && /media_urls/.test(ins.error.message || "")) {
@@ -1268,6 +1588,7 @@ if (db) {
 
       status.textContent = "✔ Hung: “" + title + "” is live in the museum.";
       $("uploadForm").reset();
+      shapeReset();
       clearCarPicks();
       loadFeed();
     } catch (err) {
