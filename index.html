@@ -827,7 +827,7 @@
         <button type="button" class="ghost" id="carShowBtn">See the photos</button>
         <button type="button" class="ghost" id="carClearBtn2">Clear these photos</button>
       </div>
-      <div class="or-line">— or hang it by link: no storage used, unlimited exhibits —</div>
+      <div class="or-line">— or hang it by link: no vault storage used —</div>
       <div class="field">
         <label for="upLink">Paste any link — YouTube, an image, a song, or a video file</label>
         <input type="url" id="upLink" placeholder="https://…">
@@ -1170,8 +1170,9 @@ async function loadComments(exhibitId, card) {
 
 <script>
 /* ============================================================
-   CURATOR UPLOAD — file goes to the `media` storage bucket,
-   then a row goes into the `exhibits` table pointing at it.
+   CURATOR UPLOAD — file goes to the bw-ocean-media Cloudflare R2
+   bucket via the upload Worker, then a row goes into the `exhibits`
+   table pointing at it. Supabase keeps the text ledger only.
    ============================================================ */
 if (db) {
   /* Uploads always trade the saved sign-in for a FRESH session token
